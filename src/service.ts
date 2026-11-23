@@ -2,6 +2,8 @@ import { requireBusinessOwnership, requireRole } from "./authorization.js";
 import { ApiError } from "./errors.js";
 import type {
   ApiRepository,
+  AggregateRecord,
+  BusinessRecord,
   OrderRecord,
   ProductRecord,
   ReportRecord,
@@ -12,7 +14,12 @@ import type {
   OrderInput,
   ProductInput,
 } from "./types.js";
-import { validateOrderInput, validateProductInput } from "./validation.js";
+import {
+  validateBusinessInput,
+  validateCategoryInput,
+  validateOrderInput,
+  validateProductInput,
+} from "./validation.js";
 
 export class ApiService {
   public constructor(private readonly repository: ApiRepository) {}
@@ -23,6 +30,31 @@ export class ApiService {
 
   public listProducts(businessUuid: string) {
     return this.repository.listProducts(businessUuid);
+  }
+
+  public async updateBusiness(
+    actor: AuthenticatedActor,
+    businessUuid: string,
+    body: unknown,
+  ): Promise<BusinessRecord> {
+    const business = await this.repository.getBusiness(businessUuid);
+    if (!business) {
+      throw new ApiError("VALIDATION_ERROR", "Business was not found.");
+    }
+    requireBusinessOwnership(actor, business.ownerUuid);
+    return this.repository.updateBusiness(
+      businessUuid,
+      validateBusinessInput(body),
+      actor,
+    );
+  }
+
+  public async verifyBusiness(
+    actor: AuthenticatedActor,
+    businessUuid: string,
+  ): Promise<BusinessRecord> {
+    requireRole(actor, "platform_admin", "system_admin");
+    return this.repository.verifyBusiness(businessUuid, actor);
   }
 
   public async createProduct(
@@ -108,6 +140,26 @@ export class ApiService {
     return order;
   }
 
+  public async listOrders(actor: AuthenticatedActor): Promise<OrderRecord[]> {
+    const orders = await this.repository.listOrders();
+    if (actor.role === "platform_admin" || actor.role === "system_admin") {
+      return orders;
+    }
+    if (actor.role === "customer") {
+      return orders.filter((order) => order.customerUuid === actor.uuid);
+    }
+    if (actor.role === "business") {
+      const ownedOrders = await Promise.all(
+        orders.map(async (order) => {
+          const business = await this.repository.getBusiness(order.businessUuid);
+          return business?.ownerUuid === actor.uuid ? order : null;
+        }),
+      );
+      return ownedOrders.filter((order): order is OrderRecord => order !== null);
+    }
+    throw new ApiError("FORBIDDEN", "The actor cannot access orders.");
+  }
+
   public async updateOrderStatus(
     actor: AuthenticatedActor,
     orderUuid: string,
@@ -171,5 +223,30 @@ export class ApiService {
   ): Promise<ReportRecord> {
     requireRole(actor, "platform_admin", "system_admin");
     return this.repository.updateReportStatus(reportUuid, status);
+  }
+
+  public async listReports(actor: AuthenticatedActor): Promise<ReportRecord[]> {
+    requireRole(actor, "platform_admin", "system_admin");
+    return this.repository.listReports();
+  }
+
+  public async listCategories(actor: AuthenticatedActor) {
+    requireRole(actor, "platform_admin", "system_admin");
+    return this.repository.listCategories();
+  }
+
+  public async createCategory(actor: AuthenticatedActor, body: unknown) {
+    requireRole(actor, "platform_admin", "system_admin");
+    return this.repository.createCategory(validateCategoryInput(body));
+  }
+
+  public async productCategoryCounts(
+    actor: AuthenticatedActor,
+    minimumGroupSize = 5,
+  ): Promise<AggregateRecord[]> {
+    requireRole(actor, "platform_admin", "system_admin");
+    return (await this.repository.productCategoryCounts()).filter(
+      (item) => item.count >= minimumGroupSize,
+    );
   }
 }

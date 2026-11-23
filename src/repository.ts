@@ -4,6 +4,9 @@ import {
   statusTransitions,
   type ApiRepository,
   type BusinessRecord,
+  type BusinessUpdateInput,
+  type CategoryRecord,
+  type AggregateRecord,
   type OrderRecord,
   type ProductRecord,
   type ReportRecord,
@@ -21,6 +24,7 @@ export class InMemoryRepository implements ApiRepository {
   public readonly products: ProductRecord[] = [];
   public readonly orders: OrderRecord[] = [];
   public readonly reports: ReportRecord[] = [];
+  public readonly categories: CategoryRecord[] = [];
   private readonly syncRows = new Map<string, SyncRow>();
 
   public async listBusinesses(): Promise<BusinessRecord[]> {
@@ -35,6 +39,31 @@ export class InMemoryRepository implements ApiRepository {
 
   public async getBusiness(uuid: string): Promise<BusinessRecord | null> {
     return this.businesses.find((item) => item.uuid === uuid) ?? null;
+  }
+
+  public async updateBusiness(
+    businessUuid: string,
+    input: BusinessUpdateInput,
+    _actor: AuthenticatedActor,
+  ): Promise<BusinessRecord> {
+    const business = await this.getBusiness(businessUuid);
+    if (!business || business.archivedAt !== null) {
+      throw new ApiError("VALIDATION_ERROR", "Business was not found.");
+    }
+    Object.assign(business, input);
+    return business;
+  }
+
+  public async verifyBusiness(
+    businessUuid: string,
+    _actor: AuthenticatedActor,
+  ): Promise<BusinessRecord> {
+    const business = await this.getBusiness(businessUuid);
+    if (!business || business.archivedAt !== null) {
+      throw new ApiError("VALIDATION_ERROR", "Business was not found.");
+    }
+    business.verifiedAt = new Date().toISOString();
+    return business;
   }
 
   public async getProduct(uuid: string): Promise<ProductRecord | null> {
@@ -136,6 +165,10 @@ export class InMemoryRepository implements ApiRepository {
     return this.orders.find((item) => item.uuid === uuid && item.archivedAt === null) ?? null;
   }
 
+  public async listOrders(): Promise<OrderRecord[]> {
+    return this.orders.filter((item) => item.archivedAt === null);
+  }
+
   public async updateOrderStatus(
     uuid: string,
     status: OrderRecord["status"],
@@ -181,6 +214,34 @@ export class InMemoryRepository implements ApiRepository {
     }
     report.status = status;
     return report;
+  }
+
+  public async listReports(): Promise<ReportRecord[]> {
+    return this.reports;
+  }
+
+  public async listCategories(): Promise<CategoryRecord[]> {
+    return this.categories.filter((item) => item.archivedAt === null);
+  }
+
+  public async createCategory(name: string): Promise<CategoryRecord> {
+    const category: CategoryRecord = {
+      uuid: randomUUID(),
+      name,
+      archivedAt: null,
+    };
+    this.categories.push(category);
+    return category;
+  }
+
+  public async productCategoryCounts(): Promise<AggregateRecord[]> {
+    const counts = new Map<string, number>();
+    for (const product of this.products) {
+      if (product.archivedAt === null && product.isAvailable !== false) {
+        counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].map(([name, count]) => ({ name, count }));
   }
 
   public async pushSyncRows(

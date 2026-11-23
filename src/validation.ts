@@ -1,5 +1,6 @@
 import { validationError } from "./errors.js";
 import type { OrderInput, ProductInput } from "./types.js";
+import type { BusinessUpdateInput } from "./domain.js";
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -156,4 +157,23 @@ export function validateOrderInput(value: unknown): OrderInput {
     ...(privateDeliveryDetails === undefined ? {} : { privateDeliveryDetails }),
     lines,
   };
+}
+
+export function validateBusinessInput(value: unknown): BusinessUpdateInput {
+  assertObject(value);
+  assertKnownFields(value, ["name", "description", "serviceArea", "contactText"]);
+  const description = optionalString(value.description, "description", 2000);
+  const contactText = optionalString(value.contactText, "contactText", 500);
+  return {
+    name: requiredString(value.name, "name"),
+    serviceArea: requiredString(value.serviceArea, "serviceArea"),
+    ...(description === undefined ? {} : { description }),
+    ...(contactText === undefined ? {} : { contactText }),
+  };
+}
+
+export function validateCategoryInput(value: unknown): string {
+  assertObject(value);
+  assertKnownFields(value, ["name"]);
+  return requiredString(value.name, "name", 100);
 }

@@ -28,14 +28,21 @@ The current core exposes:
 | GET | `/health` | Public |
 | GET | `/v1/businesses` | Public, verified businesses only |
 | GET | `/v1/businesses/:uuid/products` | Public, live products only |
+| PATCH | `/v1/businesses/:uuid/profile` | Business owner or administrator |
+| POST | `/v1/businesses/:uuid/verify` | Platform or system administrator |
 | POST | `/v1/businesses/:uuid/products` | Business owner or administrator |
 | PATCH | `/v1/products/:uuid` | Product owner or administrator |
 | DELETE | `/v1/products/:uuid` | Product owner or administrator; creates a tombstone |
 | POST | `/v1/orders` | Customer or administrator |
+| GET | `/v1/orders` | Owning customer, business owner, or administrator |
 | GET | `/v1/orders/:uuid` | Owning customer, business owner, or administrator |
 | PATCH | `/v1/orders/:uuid/status` | Business owner, administrator, or owning customer cancellation |
 | POST | `/v1/reports` | Authenticated actor |
+| GET | `/v1/reports` | Platform or system administrator |
 | PATCH | `/v1/reports/:uuid/status` | Platform or system administrator |
+| GET | `/v1/categories` | Platform or system administrator |
+| POST | `/v1/categories` | Platform or system administrator |
+| GET | `/v1/analytics/product-categories` | Platform or system administrator; minimum group size enforced |
 | POST | `/v1/sync/push` | Authenticated actor |
 | GET | `/v1/sync/pull` | Authenticated actor |
 

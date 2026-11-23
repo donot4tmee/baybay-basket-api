@@ -28,6 +28,24 @@ export interface BusinessRecord {
   archivedAt: string | null;
 }
 
+export interface BusinessUpdateInput {
+  name: string;
+  description?: string;
+  serviceArea: string;
+  contactText?: string;
+}
+
+export interface CategoryRecord {
+  uuid: string;
+  name: string;
+  archivedAt: string | null;
+}
+
+export interface AggregateRecord {
+  name: string;
+  count: number;
+}
+
 export interface ProductRecord extends ProductInput {
   uuid: string;
   businessUuid: string;
@@ -85,6 +103,15 @@ export interface ApiRepository {
   listBusinesses(): Promise<BusinessRecord[]>;
   listProducts(businessUuid: string): Promise<ProductRecord[]>;
   getBusiness(businessUuid: string): Promise<BusinessRecord | null>;
+  updateBusiness(
+    businessUuid: string,
+    input: BusinessUpdateInput,
+    actor: AuthenticatedActor,
+  ): Promise<BusinessRecord>;
+  verifyBusiness(
+    businessUuid: string,
+    actor: AuthenticatedActor,
+  ): Promise<BusinessRecord>;
   getProduct(productUuid: string): Promise<ProductRecord | null>;
   createProduct(
     businessUuid: string,
@@ -105,6 +132,7 @@ export interface ApiRepository {
     customerUuid: string,
   ): Promise<OrderRecord>;
   getOrder(orderUuid: string): Promise<OrderRecord | null>;
+  listOrders(): Promise<OrderRecord[]>;
   updateOrderStatus(
     orderUuid: string,
     status: OrderStatus,
@@ -120,6 +148,10 @@ export interface ApiRepository {
     reportUuid: string,
     status: ReportRecord["status"],
   ): Promise<ReportRecord>;
+  listReports(): Promise<ReportRecord[]>;
+  listCategories(): Promise<CategoryRecord[]>;
+  createCategory(name: string): Promise<CategoryRecord>;
+  productCategoryCounts(): Promise<AggregateRecord[]>;
   pushSyncRows(actor: AuthenticatedActor, rows: SyncRow[]): Promise<SyncPushResult>;
   pullSyncRows(actor: AuthenticatedActor, since: string | null): Promise<SyncRow[]>;
 }

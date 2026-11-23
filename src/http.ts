@@ -107,9 +107,43 @@ export async function handleRequest(
       );
       return;
     }
-
     const actor = await actorFromRequest(request, dependencies.verifier);
     const requestBody = method === "GET" ? {} : await body(request);
+
+    if (
+      method === "PATCH" &&
+      segments.length === 4 &&
+      segments[0] === "v1" &&
+      segments[1] === "businesses" &&
+      segments[3] === "profile"
+    ) {
+      send(
+        response,
+        200,
+        success(
+          await service.updateBusiness(
+            actor,
+            requiredSegment(segments, 2),
+            requestBody,
+          ),
+        ),
+      );
+      return;
+    }
+    if (
+      method === "POST" &&
+      segments.length === 4 &&
+      segments[0] === "v1" &&
+      segments[1] === "businesses" &&
+      segments[3] === "verify"
+    ) {
+      send(
+        response,
+        200,
+        success(await service.verifyBusiness(actor, requiredSegment(segments, 2))),
+      );
+      return;
+    }
 
     if (
       method === "POST" &&
@@ -133,6 +167,10 @@ export async function handleRequest(
     }
     if (method === "POST" && url.pathname === "/v1/orders") {
       send(response, 201, success(await service.createOrder(actor, requestBody)));
+      return;
+    }
+    if (method === "GET" && url.pathname === "/v1/orders") {
+      send(response, 200, success(await service.listOrders(actor)));
       return;
     }
     if (
@@ -210,6 +248,10 @@ export async function handleRequest(
       send(response, 201, success(await service.createReport(actor, requestBody)));
       return;
     }
+    if (method === "GET" && url.pathname === "/v1/reports") {
+      send(response, 200, success(await service.listReports(actor)));
+      return;
+    }
     if (
       method === "PATCH" &&
       segments.length === 4 &&
@@ -232,6 +274,27 @@ export async function handleRequest(
             actor,
             requiredSegment(segments, 2),
             (requestBody as { status: ReportRecord["status"] }).status,
+          ),
+        ),
+      );
+      return;
+    }
+    if (method === "GET" && url.pathname === "/v1/categories") {
+      send(response, 200, success(await service.listCategories(actor)));
+      return;
+    }
+    if (method === "POST" && url.pathname === "/v1/categories") {
+      send(response, 201, success(await service.createCategory(actor, requestBody)));
+      return;
+    }
+    if (method === "GET" && url.pathname === "/v1/analytics/product-categories") {
+      send(
+        response,
+        200,
+        success(
+          await service.productCategoryCounts(
+            actor,
+            Number(url.searchParams.get("minimumGroupSize") ?? 5),
           ),
         ),
       );
