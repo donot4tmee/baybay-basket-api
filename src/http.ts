@@ -300,6 +300,56 @@ export async function handleRequest(
       );
       return;
     }
+    if (method === "GET" && url.pathname === "/v1/admin/configuration") {
+      send(response, 200, success(await service.listConfiguration(actor)));
+      return;
+    }
+    if (method === "PUT" && url.pathname === "/v1/admin/configuration") {
+      if (
+        typeof requestBody !== "object" ||
+        requestBody === null ||
+        typeof (requestBody as { name?: unknown }).name !== "string" ||
+        typeof (requestBody as { value?: unknown }).value !== "string"
+      ) {
+        throw new ApiError("VALIDATION_ERROR", "Configuration name and value are required.");
+      }
+      send(
+        response,
+        200,
+        success(
+          await service.setConfiguration(
+            actor,
+            (requestBody as { name: string }).name,
+            (requestBody as { value: string }).value,
+          ),
+        ),
+      );
+      return;
+    }
+    if (method === "POST" && url.pathname === "/v1/admin/retention/run") {
+      if (
+        typeof requestBody !== "object" ||
+        requestBody === null ||
+        typeof (requestBody as { days?: unknown }).days !== "number"
+      ) {
+        throw new ApiError("VALIDATION_ERROR", "Retention days are required.");
+      }
+      send(
+        response,
+        200,
+        success(
+          await service.runRetention(
+            actor,
+            (requestBody as { days: number }).days,
+          ),
+        ),
+      );
+      return;
+    }
+    if (method === "GET" && url.pathname === "/v1/admin/backup") {
+      send(response, 200, success(await service.backupSnapshot(actor)));
+      return;
+    }
     if (method === "POST" && url.pathname === "/v1/sync/push") {
       if (
         typeof requestBody !== "object" ||

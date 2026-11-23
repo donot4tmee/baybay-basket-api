@@ -99,6 +99,12 @@ export interface SyncPushResult {
   rejected: Array<{ uuid: string; reason: string }>;
 }
 
+export interface AppConfiguration {
+  name: string;
+  value: string;
+  updatedAt: string | null;
+}
+
 export interface ApiRepository {
   listBusinesses(): Promise<BusinessRecord[]>;
   listProducts(businessUuid: string): Promise<ProductRecord[]>;
@@ -152,6 +158,10 @@ export interface ApiRepository {
   listCategories(): Promise<CategoryRecord[]>;
   createCategory(name: string): Promise<CategoryRecord>;
   productCategoryCounts(): Promise<AggregateRecord[]>;
+  listConfiguration(): Promise<AppConfiguration[]>;
+  setConfiguration(name: string, value: string): Promise<AppConfiguration>;
+  runRetention(cutoffIso: string): Promise<{ archivedAccounts: number; archivedOrders: number }>;
+  backupSnapshot(): Promise<Record<string, unknown>>;
   pushSyncRows(actor: AuthenticatedActor, rows: SyncRow[]): Promise<SyncPushResult>;
   pullSyncRows(actor: AuthenticatedActor, since: string | null): Promise<SyncRow[]>;
 }

@@ -3,6 +3,7 @@ import { ApiError } from "./errors.js";
 import type {
   ApiRepository,
   AggregateRecord,
+  AppConfiguration,
   BusinessRecord,
   OrderRecord,
   ProductRecord,
@@ -248,5 +249,40 @@ export class ApiService {
     return (await this.repository.productCategoryCounts()).filter(
       (item) => item.count >= minimumGroupSize,
     );
+  }
+
+  public async listConfiguration(actor: AuthenticatedActor): Promise<AppConfiguration[]> {
+    requireRole(actor, "system_admin");
+    return this.repository.listConfiguration();
+  }
+
+  public async setConfiguration(
+    actor: AuthenticatedActor,
+    name: string,
+    value: string,
+  ): Promise<AppConfiguration> {
+    requireRole(actor, "system_admin");
+    if (!name.trim() || !value.trim() || name.length > 100 || value.length > 2000) {
+      throw new ApiError("VALIDATION_ERROR", "The configuration name and value are invalid.");
+    }
+    return this.repository.setConfiguration(name.trim(), value.trim());
+  }
+
+  public async runRetention(
+    actor: AuthenticatedActor,
+    days: number,
+  ): Promise<{ archivedAccounts: number; archivedOrders: number }> {
+    requireRole(actor, "system_admin");
+    if (!Number.isInteger(days) || days < 30) {
+      throw new ApiError("VALIDATION_ERROR", "Retention days must be an integer of at least 30.");
+    }
+    const cutoff = new Date();
+    cutoff.setUTCDate(cutoff.getUTCDate() - days);
+    return this.repository.runRetention(cutoff.toISOString());
+  }
+
+  public async backupSnapshot(actor: AuthenticatedActor): Promise<Record<string, unknown>> {
+    requireRole(actor, "system_admin");
+    return this.repository.backupSnapshot();
   }
 }

@@ -54,3 +54,17 @@ The remaining production integration is a Supabase-backed implementation of
 `ApiRepository` and a verifier backed by Supabase Auth/Google Sign-In. Never
 accept client-supplied roles, ownership, snapshot prices, server-only
 identifiers, or attribution actors.
+
+## Production environment
+
+Set these server variables:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+PORT
+```
+
+Use `npm start` after `npm run build`. Apply database migrations `v1.0.0.sql`,
+`v1.0.1.sql`, and `v1.0.2.sql` before starting the API.

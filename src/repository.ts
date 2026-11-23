@@ -7,6 +7,7 @@ import {
   type BusinessUpdateInput,
   type CategoryRecord,
   type AggregateRecord,
+  type AppConfiguration,
   type OrderRecord,
   type ProductRecord,
   type ReportRecord,
@@ -25,6 +26,7 @@ export class InMemoryRepository implements ApiRepository {
   public readonly orders: OrderRecord[] = [];
   public readonly reports: ReportRecord[] = [];
   public readonly categories: CategoryRecord[] = [];
+  private readonly configuration = new Map<string, AppConfiguration>();
   private readonly syncRows = new Map<string, SyncRow>();
 
   public async listBusinesses(): Promise<BusinessRecord[]> {
@@ -242,6 +244,44 @@ export class InMemoryRepository implements ApiRepository {
       }
     }
     return [...counts.entries()].map(([name, count]) => ({ name, count }));
+  }
+
+  public async listConfiguration(): Promise<AppConfiguration[]> {
+    return [...this.configuration.values()];
+  }
+
+  public async setConfiguration(name: string, value: string): Promise<AppConfiguration> {
+    const item = {
+      name,
+      value,
+      updatedAt: new Date().toISOString(),
+    };
+    this.configuration.set(name, item);
+    return item;
+  }
+
+  public async runRetention(cutoffIso: string): Promise<{ archivedAccounts: number; archivedOrders: number }> {
+    const cutoff = new Date(cutoffIso);
+    let archivedAccounts = 0;
+    let archivedOrders = 0;
+    for (const order of this.orders) {
+      if (order.archivedAt === null && new Date(order.updatedAt) < cutoff) {
+        order.archivedAt = new Date().toISOString();
+        archivedOrders++;
+      }
+    }
+    return { archivedAccounts, archivedOrders };
+  }
+
+  public async backupSnapshot(): Promise<Record<string, unknown>> {
+    return {
+      generatedAt: new Date().toISOString(),
+      businesses: this.businesses,
+      products: this.products,
+      orders: this.orders,
+      reports: this.reports,
+      categories: this.categories,
+    };
   }
 
   public async pushSyncRows(
